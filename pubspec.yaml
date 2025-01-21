@@ -88,3 +88,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  assets:
+    - assets/audio/revolver_empty.mp3
+    - assets/audio/revolver_shot.mp3
+    - assets/audio/revolver_reload_single.mp3
+    - assets/audio/revolver_spin.mp3
