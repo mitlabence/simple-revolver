@@ -1,4 +1,3 @@
-import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'dart:math';
@@ -33,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
             itemBuilder: (BuildContext) => <PopupMenuEntry<String>>[
               const PopupMenuItem<String>(
                 value: "reset_view",
-                child: const Text("Reset"),
+                child: Text("Reset"),
               )
             ],
             onSelected: (String result) {
@@ -117,8 +116,12 @@ class _RevolverCardWidgetState extends State<RevolverCardWidget> {
                   shotColors = List.filled(kNChambers, Colors.black);
                   currentChamber = 0;
                 });
-                await _audioPlayer.setAsset("assets/audio/revolver_spin.mp3");
-                await _audioPlayer.play();
+                try {
+                  await _audioPlayer.setAsset("assets/audio/revolver_spin.mp3");
+                  await _audioPlayer.play();
+                } catch (e) {
+                  print(e);
+                }
                 setState(() {
                   isFiringEnabled = true;
                 });
