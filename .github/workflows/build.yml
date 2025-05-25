@@ -1,0 +1,105 @@
+# Similar (copied as initial version from) DerDieDas
+name: Build
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+jobs:
+    build:
+        name: Build & Release APK and AAB
+        runs-on: macos-latest # want to release iOS version too. unfortunately, it is impossible
+        permissions:
+          contents: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+            - name: Set up JDK 21
+              uses: actions/setup-java@v3
+              with:
+                distribution: 'oracle'
+                java-version: '21.0.5'
+            - name: Set up flutter
+              uses: subosito/flutter-action@v2
+              with:
+                    flutter-version: '3.27.1'
+                    channel: 'stable'
+            - name: Decode upload keystore
+              run: |
+                mkdir -p $GITHUB_WORKSPACE/secrets
+                echo "${{ secrets.UPLOAD_KEYSTORE_B64 }}" | base64 -d >  $GITHUB_WORKSPACE/secrets/upload_keystore_revolver.jks
+            - name: Decode key.properties
+              run: | 
+                echo "${{ secrets.KEY_PROPERTIES_B64 }}" | base64 -d > $GITHUB_WORKSPACE/android/key.properties
+            - name: Check created files
+              run: |
+                ls -l $GITHUB_WORKSPACE
+                ls -l $GITHUB_WORKSPACE/lib
+            - name: Install dependencies
+              run: |
+                cd $GITHUB_WORKSPACE
+                flutter pub get
+            # TODO: Add decode keystore step#
+            #- name: clear keys
+            #  run: |
+            #      keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+            #      flutter clean
+            - name: build APK
+              run: flutter build apk --release
+            - name: build AAB
+              run: flutter build appbundle  --release
+            - name: Sign apk
+              uses: r0adkll/sign-android-release@v1
+              # ID used to access action output
+              id: sign_app
+              with:
+                releaseDirectory: build/app/outputs/flutter-apk
+                signingKeyBase64: ${{ secrets.UPLOAD_KEYSTORE_B64 }}
+                alias: ${{ secrets.UPLOAD_KEY_ALIAS }}
+                keyStorePassword: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+              env:
+                # override default build-tools version (33.0.0) -- optional
+                BUILD_TOOLS_VERSION: "34.0.0"
+              # Example use of `signedReleaseFile` output -- not needed
+            - name: Sign aab
+              uses: r0adkll/sign-android-release@v1
+              id: sign_aab
+              with:
+                releaseDirectory: build/app/outputs/bundle/release
+                signingKeyBase64: ${{secrets.UPLOAD_KEYSTORE_B64}}
+                alias: ${{secrets.UPLOAD_KEY_ALIAS}}
+                keyStorePassword: ${{secrets.UPLOAD_KEYSTORE_PASSWORD}}
+            - name: upload signed artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: Signed releases
+                path: |
+                    build/app/outputs/bundle/release
+                    build/app/outputs/flutter-apk
+            - name: Extract version from pubspec.yaml
+              id: extract_version
+              run: |
+                version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
+                echo "VERSION=$version" >> $GITHUB_ENV
+            - name: Check if tag exists
+              id: check_tag
+              run: |
+               if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
+                 echo "TAG_EXISTS=true" >> $GITHUB_ENV
+               else
+                 echo "TAG_EXISTS=false" >> $GITHUB_ENV
+               fi
+            - name: Modify Tag
+              if: env.TAG_EXISTS == 'true'
+              id: modify_tag
+              run: |
+                new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
+                echo "VERSION=$new_version" >> $GITHUB_ENV
+            - name: Create Release
+              uses: ncipollo/release-action@v1
+              with:
+                artifacts: "build/app/outputs/flutter-apk/app-release.apk,build/app/outputs/bundle/release/app-release.aab" # build/ios_build.tar.gz not included
+                tag: v${{ env.VERSION }}
+                token: ${{ secrets.GITHUB_TOKEN  }}
