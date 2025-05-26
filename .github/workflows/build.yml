@@ -10,7 +10,7 @@ on:
 jobs:
     build:
         name: Build & Release APK and AAB
-        runs-on: macos-latest # want to release iOS version too. unfortunately, it is impossible
+        runs-on: ubuntu-latest
         permissions:
           contents: write
         steps:
@@ -41,11 +41,8 @@ jobs:
               run: |
                 cd $GITHUB_WORKSPACE
                 flutter pub get
-            # TODO: Add decode keystore step#
-            #- name: clear keys
-            #  run: |
-            #      keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
-            #      flutter clean
+            - name: clear flutter
+              run: flutter clean
             - name: build APK
               run: flutter build apk --release
             - name: build AAB
