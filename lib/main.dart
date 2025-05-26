@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 
 const kDebugMode = true;
 const kNChambers = 6; // the number of chambers the revolver should have
@@ -91,6 +92,10 @@ class _RevolverCardWidgetState extends State<RevolverCardWidget> {
     loadedChamberIndex = rng.nextInt(kNChambers);
     _audioPlayer = AudioPlayer();
     _audioPlayer.setReleaseMode(ReleaseMode.release);
+    rootBundle.loadString('AssetManifest.json').then((manifest) {
+      debugPrint(manifest);
+    });
+
   }
 
   @override
