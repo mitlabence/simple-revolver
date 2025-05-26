@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 
+const kDebugMode = true;
 const kNChambers = 6; // the number of chambers the revolver should have
 const kLoadedChamberColor = Colors.red;
 const kEmptyChamberColor = Colors.green;
@@ -90,12 +90,36 @@ class _RevolverCardWidgetState extends State<RevolverCardWidget> {
     rng = Random();
     loadedChamberIndex = rng.nextInt(kNChambers);
     _audioPlayer = AudioPlayer();
+    _audioPlayer.setReleaseMode(ReleaseMode.release);
   }
 
   @override
   void dispose() {
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAudioAsset(String assetPath) async {
+    /// Load an audio asset. Assuming the assetPath is already inside assets/,
+    /// so if intending to open assets/audio/audiofile.mp3, it should be
+    /// passed in as "audio/audiofile.mp3"
+    try {
+      await _audioPlayer.setSource(AssetSource(assetPath));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading audio: $e');
+      }
+    }
+  }
+
+  Future<void> _playAudio() async {
+    try {
+      await _audioPlayer.resume();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error playing audio: $e');
+      }
+    }
   }
 
   @override
@@ -116,12 +140,8 @@ class _RevolverCardWidgetState extends State<RevolverCardWidget> {
                   shotColors = List.filled(kNChambers, Colors.black);
                   currentChamber = 0;
                 });
-                try {
-                  await _audioPlayer.setAsset("assets/audio/revolver_spin.mp3");
-                  await _audioPlayer.play();
-                } catch (e) {
-                  print(e);
-                }
+                await _loadAudioAsset("audio/revolver_spin.wav");
+                await _playAudio();
                 setState(() {
                   isFiringEnabled = true;
                 });
@@ -163,18 +183,18 @@ class _RevolverCardWidgetState extends State<RevolverCardWidget> {
                       if (currentChamber == loadedChamberIndex) {
 // set corresponding circle to "loadedChamberColor"
 // lock fire button, only leave reset button
-                        assetPath = 'assets/audio/revolver_shot.mp3';
+                        assetPath = 'audio/revolver_shot.wav';
                         shotColor = kLoadedChamberColor;
                         allowFiringAfterCurrentShot =
                             false; // only reload should work
                       } else {
 // empty chamber
-                        assetPath = 'assets/audio/revolver_empty.mp3';
+                        assetPath = 'audio/revolver_empty.wav';
                         shotColor = kEmptyChamberColor;
                         allowFiringAfterCurrentShot = true;
                       }
-                      await _audioPlayer.setAsset(assetPath);
-                      _audioPlayer.play();
+                      await _loadAudioAsset(assetPath);
+                      await _playAudio();
                       Future.delayed(Duration(seconds: 1), () {
                         setState(() {
                           shotColors[currentChamber] = shotColor;
