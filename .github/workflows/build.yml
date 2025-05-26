@@ -40,9 +40,8 @@ jobs:
             - name: Install dependencies
               run: |
                 cd $GITHUB_WORKSPACE
+                flutter clean
                 flutter pub get
-            - name: clear flutter
-              run: flutter clean
             - name: build APK
               run: flutter build apk --release
             - name: build AAB
